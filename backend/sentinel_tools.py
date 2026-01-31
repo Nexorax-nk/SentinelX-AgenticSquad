@@ -1,5 +1,6 @@
 import json
 import random
+import re
 from datetime import datetime
 
 # --- MOCK DATABASE ---
@@ -14,34 +15,61 @@ DATABASE = {
 def analyze_login_event(log_json: str):
     """
     DETECTIVE: Analyzes raw logs for anomalies.
-    Input: JSON string of the log.
+    Input: JSON string OR plain text.
     """
-    print(f"🕵️ DETECTIVE AGENT: Scanning log stream...")
+    print(f"🕵️ DETECTIVE AGENT: Scanning log stream: {log_json}")
+    
+    # 1. Try to parse JSON, but don't crash if it fails
     try:
-        data = json.loads(log_json) if isinstance(log_json, str) else log_json
-        location = data.get("location", "Unknown")
-        user = data.get("user_id", "Unknown")
-        
-        # Risk Logic
-        risk_score = 0
-        reasons = []
-        
-        if location.lower() in ["russia", "north korea"]:
-            risk_score += 90
-            reasons.append("Geo-fencing Violation")
-        
-        if "midnight" in str(data.get("timestamp", "")).lower():
-             risk_score += 20
-             reasons.append("Anomalous Time")
+        data = json.loads(log_json)
+    except:
+        # If input is not JSON (like "User_404 from Russia"), treat it as raw text
+        data = {"raw_text": log_json}
 
-        return {
-            "analysis_id": f"ANA-{random.randint(1000,9999)}",
-            "user_id": user,
-            "risk_score": risk_score,
-            "anomalies": reasons
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    # 2. Convert everything to a lowercase string for easy keyword searching
+    # This ensures we catch "Russia" even if the JSON parsing failed or Agent sends garbage
+    searchable_text = str(data).lower()
+    if isinstance(log_json, str):
+        searchable_text += " " + log_json.lower()
+    
+    # Risk Logic
+    risk_score = 0
+    reasons = []
+    
+    # Check Keywords in the text
+    if "russia" in searchable_text or "north korea" in searchable_text:
+        risk_score += 95
+        reasons.append("Geo-fencing Violation (Hostile Nation)")
+    
+    if "sql" in searchable_text or "select *" in searchable_text:
+         risk_score += 80
+         reasons.append("SQL Injection Attempt")
+
+    if "midnight" in searchable_text:
+         risk_score += 20
+         reasons.append("Anomalous Time")
+
+    # Extract User ID (Fallback logic)
+    user = data.get("user_id", "Unknown_User")
+    
+    # If JSON failed, try to find "User_XXX" or "user_XXX" in the text manually
+    if user == "Unknown_User":
+        match = re.search(r"(user_\d+|User_\d+)", str(log_json), re.IGNORECASE)
+        if match:
+            user = match.group(1)
+        # Fallback 2: Check database keys
+        for db_user in DATABASE.keys():
+            if db_user in searchable_text:
+                user = db_user
+                break
+
+    return {
+        "analysis_id": f"ANA-{random.randint(1000,9999)}",
+        "user_id": user,
+        "risk_score": risk_score,
+        "anomalies": reasons,
+        "raw_data_received": log_json
+    }
 
 # --- TOOL 2: THREAT JUDGE ---
 def judge_threat_level(risk_score: int, anomalies: list):
@@ -58,7 +86,6 @@ def judge_threat_level(risk_score: int, anomalies: list):
         return {"verdict": "LOW", "action_required": "LOG_ONLY"}
 
 # --- TOOL 3: ENFORCEMENT OFFICER ---
-# RENAMED to match server.py
 def execute_enforcement(user_id: str, verdict: str):
     """
     ENFORCER: Executes the Kill Switch.
@@ -86,7 +113,6 @@ def execute_enforcement(user_id: str, verdict: str):
     return {"status": "SKIPPED", "reason": "Verdict below threshold"}
 
 # --- TOOL 4: COMPLIANCE CLERK ---
-# RENAMED to match server.py
 def generate_compliance_report(user_id: str, enforcement_status: str):
     """
     CLERK: Generates the Jira Ticket and Audit Report.
@@ -115,11 +141,14 @@ def generate_compliance_report(user_id: str, enforcement_status: str):
 
 # --- LOCAL TEST ---
 if __name__ == "__main__":
-    # Simulate the chain
+    # Test 1: Perfect JSON
+    print("--- Test 1: JSON ---")
     log = '{"user_id": "user_404", "location": "Russia", "timestamp": "midnight"}'
     analysis = analyze_login_event(log)
-    judgment = judge_threat_level(analysis["risk_score"], analysis["anomalies"])
-    # These calls now match the renamed functions
-    enforcement = execute_enforcement(analysis["user_id"], judgment["verdict"])
-    compliance = generate_compliance_report(analysis["user_id"], enforcement["status"])
-    print(compliance)
+    print(analysis)
+
+    # Test 2: Broken Input (Simulating Agent Error)
+    print("\n--- Test 2: Broken Text ---")
+    broken_log = "Analyze user_404 login from Russia"
+    analysis_broken = analyze_login_event(broken_log)
+    print(analysis_broken)

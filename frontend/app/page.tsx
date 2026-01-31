@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShieldCheck, Lock, AlertTriangle, Activity, MapPin, Terminal } from "lucide-react";
+import { ShieldCheck, Lock, Activity, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SentinelDashboard() {
@@ -17,7 +17,13 @@ export default function SentinelDashboard() {
         const res = await fetch("http://localhost:8000/status/user_404");
         const data = await res.json();
         
-        if (data.status === "LOCKED" && status !== "LOCKED") {
+        // --- LOGIC FIX: CHECK FOR ALL POSSIBLE LOCKED STATES ---
+        const isLocked = 
+             data.status === "LOCKED" || 
+             data.status === "BLOCKED" || 
+             data.status === "CRITICAL";
+
+        if (isLocked && status !== "LOCKED") {
           setStatus("LOCKED");
           addLog("CRITICAL THREAT DETECTED: User_404");
           addLog("SENTINEL AGENT: Initiating Lockdown Protocol...");
