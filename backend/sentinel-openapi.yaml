@@ -1,0 +1,63 @@
+openapi: 3.0.0
+info:
+  title: SentinelX Enforcement API
+  description: API for SentinelX Security Agent to analyze risks and lock accounts.
+  version: 1.0.0
+servers:
+  - url:  https://wild-ties-ring.loca.lt  # We will replace this later
+paths:
+  /analyze:
+    post:
+      summary: Analyze Login Risk
+      operationId: analyze_login_risk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ip_address:
+                  type: string
+                location:
+                  type: string
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Risk analysis result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  risk_level:
+                    type: string
+                  recommendation:
+                    type: string
+
+  /lockdown:
+    post:
+      summary: Execute Account Lockdown
+      operationId: execute_lockdown
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Lockdown status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  audit_ticket:
+                    type: string
