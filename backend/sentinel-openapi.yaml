@@ -5,7 +5,7 @@ info:
   version: 2.1.0
 servers:
   # ⚠️ REPLACE THIS WITH YOUR CURRENT NGROK URL (e.g. https://abc-123.ngrok-free.app)
-  - url: https://fair-oranges-matter.loca.lt
+  - url: https://odd-spiders-invent.loca.lt
 paths:
   /detective/analyze:
     post:
